@@ -2,7 +2,6 @@
 """Script that fetch 10 hot post for a given subreddit."""
 import requests
 
-
 def number_of_subscribers(subreddit):
     """Return the number of subscribers for the given subreddit."""
     url = f"https://www.reddit.com/r/{subreddit}/about.json"
