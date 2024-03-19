@@ -1,1 +1,1 @@
-API advanced by Daniel- IRYIVUZE
+API advanced by Daniel IRYIVUZE

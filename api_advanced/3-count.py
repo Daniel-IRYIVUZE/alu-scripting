@@ -1,77 +1,47 @@
 #!/usr/bin/python3
-"""A script that counts the number of occurrences of list of words
-in a given subreddit."""
+"""Module Done"""
 
-from audioop import reverse
 import requests
 
-headers = {'User-Agent': 'MyAPI/0.0.1'}
 
+def count_words(subreddit, word_list, word_count={}, after=None):
+    """Queries Reddit API for the subreddit"""
 
-def count_words(subreddit, word_list, after="", hot_list=[]):
-    """print the sorted count of word_list."""
+    sub_info = requests.get(
+        f"https://www.reddit.com/r/{subreddit}/hot.json",
+        params={"after": after},
+        headers={"User-Agent": "My-User-Agent"},
+        allow_redirects=False
+    )
 
-    subreddit_url = "https://reddit.com/r/{}/hot.json".format(subreddit)
+    if sub_info.status_code != 200:
+        return None
 
-    parameters = {'limit': 100, 'after': after}
-    response = requests.get(subreddit_url, headers=headers, params=parameters)
+    info = sub_info.json()
 
-    if response.status_code == 200:
+    hot_l = [child.get("data").get("title")
+             for child in info.get("data").get("children")]
 
-        # print(response.status_code)
-        json_data = response.json()
-        if (json_data.get('data').get('dist') == 0):
-            return
-        # get the 'after' value from the response to pass it on the request
+    if not hot_l:
+        return None
 
-        # get title and append it to the hot_list
-        for child in json_data.get('data').get('children'):
-            title = child.get('data').get('title')
-            hot_list.append(title)
+    word_list = list(dict.fromkeys(word_list))
 
-        # variable after indicates if there is data on the next pagination
-        # on the reddit API after holds a unique name for that subreddit page.
-        # if it is None it indicates it is the last page.
-        after = json_data.get('data').get('after')
-        if after is not None:
-            # print("got next page")
-            # print(len(hot_list))
-            return count_words(subreddit, word_list,
-                               after=after, hot_list=hot_list)
-        else:
-            # put the initial words counter dictionary
-            counter = {}
-            for word in word_list:
-                word = word.lower()
-                if word not in counter.keys():
-                    counter[word] = 0
-                else:
-                    counter[word] += 1
-            # loop through the hot_list to check if word is found in the list
-            for title in hot_list:
-                title_list = title.lower().split(' ')
-                for word in counter.keys():
-                    search_word = "{}".format(word)
-                    if search_word in title_list:
-                        counter[word] += 1
-            sorted_counter = dict(
-                sorted(counter.items(),
-                       key=lambda item: item[1], reverse=True))
-            for key, value in sorted_counter.items():
-                if value > 0:
-                    print("{}: {}".format(key, value))
-            # print(hot_list)
+    if word_count == {}:
+        word_count = {word: 0 for word in word_list}
 
+    for title in hot_l:
+        split_words = title.split(' ')
+        for word in word_list:
+            for s_word in split_words:
+                if s_word.lower() == word.lower():
+                    word_count[word] += 1
+
+    if not info.get("data").get("after"):
+        sorted_counts = sorted(word_count.items(), key=lambda kv: kv[0])
+        sorted_counts = sorted(word_count.items(),
+                               key=lambda kv: kv[1], reverse=True)
+        [print('{}: {}'.format(k, v)) for k, v in sorted_counts if v != 0]
     else:
-        return
-
-
-if __name__ == '__main__':
-    count_words("hello", ['REDDIT', 'german', 'HI', 'whynot'])
-    count_words('unpopular', ['down', 'vote', 'downvote',
-                              'you', 'her', 'unpopular', 'politics'])
-    # count_words("hello", ['hello', 'hello', 'hello'])
-    # count_words("unpopular", ["react", "python", "java",
-    # "javascript", "scala", "no_result_for_this"])
-
-    # count_words('hello', ['hello', 'hello', 'hello'])
+        return count_words(subreddit, word_list, word_count,
+                           info.get("data").get("after"))
